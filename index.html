@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Галерея NFC</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <nav class="topbar">
+        <a class="brand" href="#catalog">Art NFC</a>
+        <a class="nav-link" href="#catalog">Каталог</a>
+      </nav>
+      <div class="hero__content">
+        <p class="eyebrow">Интерактивная выставка</p>
+        <h1>Поднесите телефон к NFC-чипу у картины</h1>
+        <p>
+          Телефон откроет персональную страницу экспоната с описанием, аудио-подсказкой,
+          QR-кодом для передачи информации и быстрым выходом в каталог.
+        </p>
+        <a class="button button--light" href="#catalog">Открыть каталог</a>
+      </div>
+    </header>
+
+    <main>
+      <section id="detail" class="detail hidden" aria-live="polite"></section>
+
+      <section id="catalog" class="catalog">
+        <div class="section-heading">
+          <p class="eyebrow">Каталог</p>
+          <h2>Все картины</h2>
+          <p>Ищите по названию, автору, эпохе или настроению. Фильтры помогают быстро собрать маршрут по залу.</p>
+        </div>
+
+        <div class="filters" role="search">
+          <label>
+            Поиск
+            <input id="searchInput" type="search" placeholder="Например: море, Ван Гог, импрессионизм" />
+          </label>
+          <label>
+            Направление
+            <select id="styleFilter">
+              <option value="all">Все направления</option>
+            </select>
+          </label>
+          <label>
+            Зал
+            <select id="hallFilter">
+              <option value="all">Все залы</option>
+            </select>
+          </label>
+        </div>
+
+        <div id="cards" class="cards"></div>
+        <p id="emptyState" class="empty hidden">Ничего не найдено. Попробуйте изменить запрос или фильтр.</p>
+      </section>
+    </main>
+
+    <footer>
+      <p>Для NFC-чипа используйте ссылку вида <code>https://site.example/#starry-night</code>.</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
