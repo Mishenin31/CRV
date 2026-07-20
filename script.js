@@ -79,6 +79,8 @@ const searchInput = document.querySelector('#searchInput');
 const styleFilter = document.querySelector('#styleFilter');
 const hallFilter = document.querySelector('#hallFilter');
 const emptyState = document.querySelector('#emptyState');
+const registrationForm = document.querySelector('#registrationForm');
+const registrationResult = document.querySelector('#registrationResult');
 
 function uniqueOptions(key) {
   return [...new Set(paintings.map((painting) => painting[key]))].sort();
@@ -113,11 +115,20 @@ function renderCards() {
         <h3>${painting.title}</h3>
         <p class="meta">${painting.author} · ${painting.year}<br>${painting.style} · ${painting.hall}</p>
         <div class="tags"><span class="tag">${painting.mood}</span><span class="tag">NFC: #${painting.id}</span></div>
-        <a class="button" href="#${painting.id}">Страница картины</a>
+        <div class="card__actions">
+          <a class="button" href="#${painting.id}">Страница картины</a>
+          <button class="button button--ghost buy-button" type="button" data-title="${painting.title}">Купить</button>
+        </div>
       </div>
     </article>
   `).join('');
   emptyState.classList.toggle('hidden', filtered.length > 0);
+  document.querySelectorAll('.buy-button').forEach((button) => {
+    button.addEventListener('click', () => {
+      button.textContent = 'Заявка отправлена';
+      button.disabled = true;
+    });
+  });
 }
 
 function renderDetail() {
@@ -162,7 +173,17 @@ function renderDetail() {
   detail.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+function handleRegistrationSubmit(event) {
+  event.preventDefault();
+  const formData = new FormData(registrationForm);
+  const name = formData.get('name').toString().trim();
+  const role = formData.get('role');
+  registrationResult.textContent = `${name}, регистрация в роли «${role}» отправлена.`;
+  registrationForm.reset();
+}
+
 fillFilters();
+registrationForm.addEventListener('submit', handleRegistrationSubmit);
 renderCards();
 renderDetail();
 [searchInput, styleFilter, hallFilter].forEach((control) => control.addEventListener('input', renderCards));

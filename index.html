@@ -3,28 +3,81 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Галерея NFC</title>
+    <title>crv</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <header class="hero">
       <nav class="topbar">
-        <a class="brand" href="#catalog">Art NFC</a>
-        <a class="nav-link" href="#catalog">Каталог</a>
+        <a class="brand" href="#catalog">crv</a>
+        <div class="nav-links">
+          <a class="nav-link" href="#catalog">Каталог</a>
+          <a class="nav-link" href="#registration">Регистрация</a>
+        </div>
       </nav>
       <div class="hero__content">
-        <p class="eyebrow">Интерактивная выставка</p>
+        <p class="eyebrow">Интерактивная выставка crv</p>
         <h1>Поднесите телефон к NFC-чипу у картины</h1>
         <p>
           Телефон откроет персональную страницу экспоната с описанием, аудио-подсказкой,
           QR-кодом для передачи информации и быстрым выходом в каталог.
         </p>
-        <a class="button button--light" href="#catalog">Открыть каталог</a>
+        <div class="hero__actions">
+          <a class="button button--light" href="#catalog">Открыть каталог</a>
+          <a class="button button--outline" href="#registration">Зарегистрироваться</a>
+        </div>
       </div>
     </header>
 
     <main>
       <section id="detail" class="detail hidden" aria-live="polite"></section>
+
+      <section id="registration" class="registration">
+        <div class="section-heading">
+          <p class="eyebrow">Регистрация</p>
+          <h2>Выберите роль в crv</h2>
+          <p>Зарегистрируйтесь как администратор, менеджер или покупатель, чтобы получить нужный набор возможностей.</p>
+        </div>
+
+        <div class="roles" aria-label="Доступные роли">
+          <article class="role-card">
+            <span class="role-card__icon">A</span>
+            <h3>Админ</h3>
+            <p>Управляет каталогом, ролями пользователей, NFC-страницами и настройками проекта.</p>
+          </article>
+          <article class="role-card">
+            <span class="role-card__icon">M</span>
+            <h3>Менеджер</h3>
+            <p>Добавляет экспонаты, обновляет описания, проверяет заявки и помогает посетителям.</p>
+          </article>
+          <article class="role-card">
+            <span class="role-card__icon">P</span>
+            <h3>Покупатель</h3>
+            <p>Сохраняет понравившиеся картины, отправляет заявки и покупает доступные работы.</p>
+          </article>
+        </div>
+
+        <form id="registrationForm" class="registration-form">
+          <label>
+            Имя
+            <input id="userName" name="name" type="text" placeholder="Введите имя" required />
+          </label>
+          <label>
+            Email
+            <input id="userEmail" name="email" type="email" placeholder="name@example.com" required />
+          </label>
+          <label>
+            Роль
+            <select id="roleSelect" name="role" required>
+              <option value="Админ">Админ</option>
+              <option value="Менеджер">Менеджер</option>
+              <option value="Покупатель">Покупатель</option>
+            </select>
+          </label>
+          <button class="button" type="submit">Зарегистрироваться</button>
+          <p id="registrationResult" class="form-result" aria-live="polite"></p>
+        </form>
+      </section>
 
       <section id="catalog" class="catalog">
         <div class="section-heading">
@@ -58,7 +111,7 @@
     </main>
 
     <footer>
-      <p>Для NFC-чипа используйте ссылку вида <code>https://site.example/#starry-night</code>.</p>
+      <p>crv: для NFC-чипа используйте ссылку вида <code>https://site.example/#starry-night</code>.</p>
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
