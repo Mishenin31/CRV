@@ -1,414 +1,156 @@
-const paintings = [
-  {
-    id: 'starry-night',
-    title: 'Звёздная ночь',
-    author: 'Винсент Ван Гог',
-    year: '1889',
-    style: 'Постимпрессионизм',
-    hall: 'Зал 1',
-    mood: 'Динамика',
-    colors: 'linear-gradient(135deg, #101d42, #1f5f99 48%, #f3c44d 49%, #f9ed9c)',
-    description: 'Вихревое ночное небо показывает, как художник превращал внутреннее переживание в ритм цвета и мазка. Страница подходит для NFC-метки рядом с репродукцией.',
-    fact: 'Картина написана в Сен-Реми и стала одним из самых узнаваемых образов ночного пейзажа.'
-  },
-  {
-    id: 'girl-with-pearl',
-    title: 'Девушка с жемчужной серёжкой',
-    author: 'Ян Вермеер',
-    year: 'ок. 1665',
-    style: 'Барокко',
-    hall: 'Зал 2',
-    mood: 'Тишина',
-    colors: 'linear-gradient(135deg, #111, #243b55 45%, #e5c06b 46%, #f7dfb2)',
-    description: 'Камерный портрет строится на взгляде, мягком свете и контрасте тёмного фона с сиянием жемчуга.',
-    fact: 'Работу часто называют «северной Моной Лизой» за загадочность выражения лица.'
-  },
-  {
-    id: 'great-wave',
-    title: 'Большая волна в Канагаве',
-    author: 'Кацусика Хокусай',
-    year: '1831',
-    style: 'Укиё-э',
-    hall: 'Зал 3',
-    mood: 'Энергия',
-    colors: 'linear-gradient(135deg, #f8f0d8, #2b6cb0 48%, #0f2f57 49%, #d8edf8)',
-    description: 'Гравюра соединяет силу природы, графическую ясность и выразительный силуэт горы Фудзи вдали.',
-    fact: 'Это лист из серии «Тридцать шесть видов Фудзи».'
-  },
-  {
-    id: 'birth-of-venus',
-    title: 'Рождение Венеры',
-    author: 'Сандро Боттичелли',
-    year: 'ок. 1485',
-    style: 'Ренессанс',
-    hall: 'Зал 2',
-    mood: 'Лёгкость',
-    colors: 'linear-gradient(135deg, #cbe5df, #f5d6bd 48%, #b6d6a8 49%, #f8efe1)',
-    description: 'Мифологический сюжет представлен как торжественный выход красоты, где линия важнее материальной тяжести фигур.',
-    fact: 'Темперная живопись на холсте была необычным выбором для крупного произведения XV века.'
-  },
-  {
-    id: 'black-square',
-    title: 'Чёрный квадрат',
-    author: 'Казимир Малевич',
-    year: '1915',
-    style: 'Супрематизм',
-    hall: 'Зал 4',
-    mood: 'Концепт',
-    colors: 'linear-gradient(135deg, #f2eee7 0 35%, #050505 36% 72%, #d7ccbd 73%)',
-    description: 'Работа сводит изображение к знаку и предлагает смотреть на картину как на идею, а не окно в реальность.',
-    fact: 'Полотно стало ключевым символом русского авангарда.'
-  },
-  {
-    id: 'water-lilies',
-    title: 'Кувшинки',
-    author: 'Клод Моне',
-    year: '1916',
-    style: 'Импрессионизм',
-    hall: 'Зал 1',
-    mood: 'Созерцание',
-    colors: 'linear-gradient(135deg, #8fc3a9, #6b8fc9 45%, #d0b4dd 46%, #f2d2a9)',
-    description: 'Сад в Живерни становится почти абстрактным полем света, отражений и цветовых вибраций.',
-    fact: 'Моне писал серии кувшинок много лет, наблюдая один и тот же мотив в разном свете.'
-  }
-];
+const API = '/api';
+const CART_KEY = 'techStoreCart';
+const SESSION_KEY = 'techStoreUser';
+const categories = { smartphones: 'Смартфоны', laptops: 'Ноутбуки', accessories: 'Аксессуары' };
 
-const STORAGE_KEYS = {
-  registrations: 'crvRegistrations',
-  purchases: 'crvPurchaseRequests',
-  users: 'crvUsers',
-  session: 'crvSession'
-};
+const state = { products: [], category: 'all' };
+const $ = (selector) => document.querySelector(selector);
+const money = (value) => new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(value);
 
-const SECTION_HASHES = new Set(['', 'catalog', 'auth', 'adminCabinet']);
+function readCart() { return JSON.parse(localStorage.getItem(CART_KEY) || '[]'); }
+function saveCart(cart) { localStorage.setItem(CART_KEY, JSON.stringify(cart)); renderCart(); }
+function getSession() { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); }
+function setSession(user) { localStorage.setItem(SESSION_KEY, JSON.stringify(user)); renderAccount(); }
 
-const DEFAULT_ADMIN = {
-  name: 'Администратор crv',
-  email: 'admin@crv.local',
-  password: 'admin123',
-  role: 'Админ'
-};
-
-const cards = typeof document !== 'undefined' ? document.querySelector('#cards') : null;
-const detail = typeof document !== 'undefined' ? document.querySelector('#detail') : null;
-const searchInput = typeof document !== 'undefined' ? document.querySelector('#searchInput') : null;
-const styleFilter = typeof document !== 'undefined' ? document.querySelector('#styleFilter') : null;
-const hallFilter = typeof document !== 'undefined' ? document.querySelector('#hallFilter') : null;
-const emptyState = typeof document !== 'undefined' ? document.querySelector('#emptyState') : null;
-const registrationForm = typeof document !== 'undefined' ? document.querySelector('#registrationForm') : null;
-const registrationResult = typeof document !== 'undefined' ? document.querySelector('#registrationResult') : null;
-const loginForm = typeof document !== 'undefined' ? document.querySelector('#loginForm') : null;
-const loginResult = typeof document !== 'undefined' ? document.querySelector('#loginResult') : null;
-const managerForm = typeof document !== 'undefined' ? document.querySelector('#managerForm') : null;
-const managerResult = typeof document !== 'undefined' ? document.querySelector('#managerResult') : null;
-const adminCabinet = typeof document !== 'undefined' ? document.querySelector('#adminCabinet') : null;
-const usersList = typeof document !== 'undefined' ? document.querySelector('#usersList') : null;
-const currentUserInfo = typeof document !== 'undefined' ? document.querySelector('#currentUserInfo') : null;
-const logoutButton = typeof document !== 'undefined' ? document.querySelector('#logoutButton') : null;
-
-function uniqueOptions(key) {
-  return [...new Set(paintings.map((painting) => painting[key]))].sort();
+async function request(path, options = {}) {
+  const response = await fetch(`${API}${path}`, { headers: { 'Content-Type': 'application/json' }, ...options });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || 'Ошибка сервера');
+  return data;
 }
 
-function fillFilters() {
-  uniqueOptions('style').forEach((style) => styleFilter.append(new Option(style, style)));
-  uniqueOptions('hall').forEach((hall) => hallFilter.append(new Option(hall, hall)));
+function filterProducts(products, category = 'all') {
+  return category === 'all' ? products : products.filter((product) => product.category === category);
 }
 
-function paintingUrl(painting) {
-  return `${location.origin}${location.pathname}#${painting.id}`;
+function buildCartItems(cart, products) {
+  return cart.map((item) => {
+    const product = products.find((entry) => entry.id === item.productId);
+    return product ? { ...product, quantity: item.quantity, subtotal: product.price * item.quantity } : null;
+  }).filter(Boolean);
 }
 
-function qrText(painting) {
-  return paintingUrl(painting);
+async function loadProducts(category = state.category) {
+  state.category = category;
+  state.products = await request(`/products?category=${encodeURIComponent(category)}`);
+  renderProducts();
+  renderCart();
 }
 
-function filterPaintings(items, query = '', style = 'all', hall = 'all') {
-  const normalizedQuery = query.trim().toLowerCase();
-  return items.filter((painting) => {
-    const haystack = [
-      painting.title,
-      painting.author,
-      painting.year,
-      painting.style,
-      painting.hall,
-      painting.mood,
-      painting.description
-    ].join(' ').toLowerCase();
-
-    return (!normalizedQuery || haystack.includes(normalizedQuery))
-      && (style === 'all' || painting.style === style)
-      && (hall === 'all' || painting.hall === hall);
-  });
-}
-
-function readStoredItems(key) {
-  try {
-    return JSON.parse(localStorage.getItem(key)) || [];
-  } catch {
-    return [];
-  }
-}
-
-function saveStoredItem(key, item) {
-  const items = readStoredItems(key);
-  items.push({ ...item, createdAt: new Date().toISOString() });
-  localStorage.setItem(key, JSON.stringify(items));
-}
-
-function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-function normalizeEmail(email) {
-  return email.toString().trim().toLowerCase();
-}
-
-function getUsers() {
-  const users = readStoredItems(STORAGE_KEYS.users);
-  const hasAdmin = users.some((user) => user.role === 'Админ');
-  return hasAdmin ? users : [{ ...DEFAULT_ADMIN, createdAt: new Date().toISOString() }, ...users];
-}
-
-function saveUsers(users) {
-  localStorage.setItem(STORAGE_KEYS.users, JSON.stringify(users));
-}
-
-function seedUsers() {
-  saveUsers(getUsers());
-}
-
-function getCurrentUser() {
-  try {
-    const session = JSON.parse(localStorage.getItem(STORAGE_KEYS.session));
-    if (!session?.email) return null;
-    return getUsers().find((user) => user.email === session.email) || null;
-  } catch {
-    return null;
-  }
-}
-
-function isAdmin(user) {
-  return user?.role === 'Админ';
-}
-
-function canRegisterRole(role, currentUser) {
-  if (role === 'Покупатель') return true;
-  if (role === 'Менеджер') return isAdmin(currentUser);
-  return false;
-}
-
-function addUser({ name, email, password, role }, currentUser = null) {
-  const cleanName = name.toString().trim();
-  const cleanEmail = normalizeEmail(email);
-  const cleanPassword = password.toString();
-
-  if (!cleanName) return { ok: false, message: 'Введите имя.' };
-  if (!cleanEmail || !isValidEmail(cleanEmail)) return { ok: false, message: 'Введите корректный email, например name@example.com.' };
-  if (cleanPassword.length < 6) return { ok: false, message: 'Пароль должен содержать минимум 6 символов.' };
-  if (!canRegisterRole(role, currentUser)) return { ok: false, message: 'Менеджеров может добавлять только администратор.' };
-
-  const users = getUsers();
-  if (users.some((user) => user.email === cleanEmail)) return { ok: false, message: 'Пользователь с таким email уже существует.' };
-
-  const user = { name: cleanName, email: cleanEmail, password: cleanPassword, role, createdAt: new Date().toISOString() };
-  users.push(user);
-  saveUsers(users);
-  saveStoredItem(STORAGE_KEYS.registrations, { name: cleanName, email: cleanEmail, role });
-  return { ok: true, user, message: `${cleanName}, регистрация в роли «${role}» выполнена.` };
-}
-
-function login(email, password) {
-  const cleanEmail = normalizeEmail(email);
-  const user = getUsers().find((item) => item.email === cleanEmail && item.password === password.toString());
-  if (!user) return { ok: false, message: 'Неверный email или пароль.' };
-  localStorage.setItem(STORAGE_KEYS.session, JSON.stringify({ email: user.email }));
-  return { ok: true, user, message: `Вы вошли как ${user.name} (${user.role}).` };
-}
-
-function renderUsers() {
-  if (!usersList) return;
-  const users = getUsers();
-  usersList.innerHTML = users.map((user) => `
-    <div class="user-row">
-      <strong>${user.name}</strong>
-      <span>${user.email}</span>
-      <span class="tag">${user.role}</span>
-    </div>
-  `).join('');
-}
-
-function renderAuthState() {
-  const user = getCurrentUser();
-  document.querySelectorAll('.admin-only').forEach((item) => item.classList.toggle('hidden', !isAdmin(user)));
-  if (adminCabinet) adminCabinet.classList.toggle('hidden', !isAdmin(user));
-  if (currentUserInfo) currentUserInfo.textContent = user ? `Сейчас в системе: ${user.name} (${user.role}).` : 'Войдите как администратор, чтобы открыть кабинет.';
-  renderUsers();
-}
-
-function renderCards() {
-  const query = searchInput.value;
-  const style = styleFilter.value;
-  const hall = hallFilter.value;
-  const filtered = filterPaintings(paintings, query, style, hall);
-
-  cards.innerHTML = filtered.map((painting) => `
-    <article class="card" style="--painting-gradient: ${painting.colors}">
-      <div class="card__image" role="img" aria-label="Цветовая композиция картины ${painting.title}"></div>
+function renderProducts() {
+  $('#products').innerHTML = state.products.map((product) => `
+    <article class="card">
+      <img src="${product.image}" alt="${product.name}" />
       <div class="card__body">
-        <h3>${painting.title}</h3>
-        <p class="meta">${painting.author} · ${painting.year}<br>${painting.style} · ${painting.hall}</p>
-        <div class="tags"><span class="tag">${painting.mood}</span><span class="tag">NFC: #${painting.id}</span></div>
-        <div class="card__actions">
-          <a class="button" href="#${painting.id}">Страница картины</a>
-          <button class="button button--ghost buy-button" type="button" data-id="${painting.id}" data-title="${painting.title}">Купить</button>
+        <span class="tag">${categories[product.category]}</span>
+        <h3>${product.name}</h3>
+        <p>${product.description}</p>
+        <p class="meta">В наличии: ${product.stock} шт.</p>
+        <strong>${money(product.price)}</strong>
+        <div class="actions">
+          <a class="button button--ghost" href="#${product.id}">Карточка товара</a>
+          <button class="button" data-add="${product.id}" type="button">В корзину</button>
         </div>
       </div>
     </article>
   `).join('');
-  emptyState.classList.toggle('hidden', filtered.length > 0);
-  document.querySelectorAll('.buy-button').forEach((button) => {
-    button.addEventListener('click', () => {
-      saveStoredItem(STORAGE_KEYS.purchases, {
-        paintingId: button.dataset.id,
-        title: button.dataset.title
-      });
-      button.textContent = 'Заявка отправлена';
-      button.disabled = true;
-    });
+  document.querySelectorAll('[data-add]').forEach((button) => button.addEventListener('click', () => addToCart(button.dataset.add)));
+}
+
+async function renderProductDetail() {
+  const id = location.hash.slice(1);
+  if (!id || ['catalog', 'cart', 'auth', 'account'].includes(id)) return $('#product').classList.add('hidden');
+  try {
+    const product = await request(`/products/${id}`);
+    $('#product').classList.remove('hidden');
+    $('#product').innerHTML = `
+      <div class="product-detail">
+        <img src="${product.image}" alt="${product.name}" />
+        <div>
+          <p class="eyebrow">Карточка товара</p>
+          <h2>${product.name}</h2>
+          <p>${product.description}</p>
+          <p class="meta">Категория: ${categories[product.category]} · Количество на складе: ${product.stock}</p>
+          <strong class="price">${money(product.price)}</strong>
+          <button class="button" data-add="${product.id}" type="button">Добавить в корзину</button>
+        </div>
+      </div>`;
+    $('#product [data-add]').addEventListener('click', () => addToCart(product.id));
+    $('#product').scrollIntoView({ behavior: 'smooth' });
+  } catch (error) {
+    $('#product').classList.remove('hidden');
+    $('#product').innerHTML = `<h2>Товар не найден</h2><p>${error.message}</p>`;
+  }
+}
+
+function addToCart(productId) {
+  const cart = readCart();
+  const item = cart.find((entry) => entry.productId === productId);
+  if (item) item.quantity += 1; else cart.push({ productId, quantity: 1 });
+  saveCart(cart);
+}
+
+function changeQuantity(productId, delta) {
+  const cart = readCart().map((item) => item.productId === productId ? { ...item, quantity: item.quantity + delta } : item).filter((item) => item.quantity > 0);
+  saveCart(cart);
+}
+
+function renderCart() {
+  const cartItems = buildCartItems(readCart(), state.products);
+  $('#cartCounter').textContent = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  $('#cartItems').innerHTML = cartItems.length ? cartItems.map((item) => `
+    <div class="cart-row">
+      <span>${item.name}</span><span>${money(item.price)} × ${item.quantity}</span>
+      <div><button data-minus="${item.id}">−</button><button data-plus="${item.id}">+</button></div>
+    </div>`).join('') : '<p class="meta">Корзина пуста.</p>';
+  $('#cartTotal').textContent = `Итого: ${money(cartItems.reduce((sum, item) => sum + item.subtotal, 0))}`;
+  document.querySelectorAll('[data-minus]').forEach((button) => button.addEventListener('click', () => changeQuantity(button.dataset.minus, -1)));
+  document.querySelectorAll('[data-plus]').forEach((button) => button.addEventListener('click', () => changeQuantity(button.dataset.plus, 1)));
+}
+
+async function renderAccount() {
+  const user = getSession();
+  $('#accountUser').textContent = user ? `${user.name} (${user.email})` : 'Войдите, чтобы увидеть свои заказы.';
+  if (!user) return $('#orders').innerHTML = '';
+  const orders = await request(`/orders/${encodeURIComponent(user.email)}`);
+  $('#orders').innerHTML = orders.length ? orders.map((order) => `<div class="order"><strong>Заказ ${order.id.slice(0, 8)}</strong><span>${new Date(order.createdAt).toLocaleString('ru-RU')}</span><span>${money(order.total)}</span></div>`).join('') : '<p class="meta">Заказов пока нет.</p>';
+}
+
+function bindForms() {
+  $('#registerForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const result = $('#registerResult');
+    try { const data = await request('/register', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(event.target))) }); result.textContent = data.message; setSession(data.user); event.target.reset(); }
+    catch (error) { result.textContent = error.message; }
   });
-}
-
-function renderNotFound(id) {
-  detail.classList.remove('hidden');
-  detail.removeAttribute('style');
-  detail.innerHTML = `
-    <div class="detail__content detail__content--not-found">
-      <p class="eyebrow">NFC-страница</p>
-      <h2>Экспонат не найден</h2>
-      <p class="meta">Экспонат с идентификатором «${id}» отсутствует в каталоге crv.</p>
-      <div class="detail__actions">
-        <a class="button" href="#catalog">Вернуться в каталог</a>
-      </div>
-    </div>
-  `;
-}
-
-function renderDetail() {
-  const id = decodeURIComponent(location.hash.replace('#', ''));
-  const painting = paintings.find((item) => item.id === id);
-
-  if (!painting) {
-    detail.classList.toggle('hidden', SECTION_HASHES.has(id));
-    if (!SECTION_HASHES.has(id)) {
-      renderNotFound(id);
-    }
-    return;
-  }
-
-  detail.classList.remove('hidden');
-  detail.style.setProperty('--painting-gradient', painting.colors);
-  detail.innerHTML = `
-    <div class="detail__content">
-      <p class="eyebrow">${painting.hall} · NFC-страница</p>
-      <h2>${painting.title}</h2>
-      <p class="meta">${painting.author} · ${painting.year} · ${painting.style}</p>
-      <p>${painting.description}</p>
-      <div class="facts">
-        <div class="fact"><strong>Настроение</strong>${painting.mood}</div>
-        <div class="fact"><strong>Факт</strong>${painting.fact}</div>
-      </div>
-      <div class="detail__actions">
-        <a class="button" href="#catalog">Выйти в каталог</a>
-        <button class="button button--ghost" type="button" id="copyLink">Скопировать ссылку для NFC</button>
-      </div>
-      <div class="qr-panel">
-        <strong>QR-код со ссылкой на картину</strong>
-        <p class="meta">Посетитель может отсканировать код и открыть страницу экспоната.</p>
-        <canvas id="qrCanvas" aria-label="QR-код картины ${painting.title}"></canvas>
-        <p id="qrFallback" class="qr-fallback hidden"><a href="${paintingUrl(painting)}">${paintingUrl(painting)}</a></p>
-      </div>
-    </div>
-    <div class="detail__image" role="img" aria-label="Цветовая композиция картины ${painting.title}"></div>
-  `;
-
-  const canvas = document.querySelector('#qrCanvas');
-  const fallback = document.querySelector('#qrFallback');
-  if (window.QRCode) {
-    QRCode.toCanvas(canvas, qrText(painting), { width: 180, margin: 1, color: { dark: '#201a17', light: '#ffffff' } });
-  } else {
-    canvas.classList.add('hidden');
-    fallback.classList.remove('hidden');
-  }
-
-  document.querySelector('#copyLink').addEventListener('click', async () => {
-    await navigator.clipboard.writeText(paintingUrl(painting));
-    document.querySelector('#copyLink').textContent = 'Ссылка скопирована';
+  $('#loginForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const result = $('#loginResult');
+    try { const data = await request('/login', { method: 'POST', body: JSON.stringify(Object.fromEntries(new FormData(event.target))) }); result.textContent = data.message; setSession(data.user); }
+    catch (error) { result.textContent = error.message; }
   });
-  detail.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-function handleRegistrationSubmit(event) {
-  event.preventDefault();
-  const formData = new FormData(registrationForm);
-  const result = addUser({
-    name: formData.get('name'),
-    email: formData.get('email'),
-    password: formData.get('password'),
-    role: formData.get('role')
+  $('#orderForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const result = $('#orderResult');
+    try {
+      const customer = Object.fromEntries(new FormData(event.target));
+      const data = await request('/orders', { method: 'POST', body: JSON.stringify({ customer, items: readCart() }) });
+      result.textContent = data.message; saveCart([]); event.target.reset(); await loadProducts(); await renderAccount();
+    } catch (error) { result.textContent = error.message; }
   });
-
-  registrationResult.textContent = result.message;
-  if (result.ok) registrationForm.reset();
-}
-
-function handleLoginSubmit(event) {
-  event.preventDefault();
-  const formData = new FormData(loginForm);
-  const result = login(formData.get('email'), formData.get('password'));
-  loginResult.textContent = result.message;
-  if (result.ok) {
-    loginForm.reset();
-    renderAuthState();
-    if (isAdmin(result.user)) location.hash = 'adminCabinet';
-  }
-}
-
-function handleManagerSubmit(event) {
-  event.preventDefault();
-  const formData = new FormData(managerForm);
-  const result = addUser({
-    name: formData.get('name'),
-    email: formData.get('email'),
-    password: formData.get('password'),
-    role: 'Менеджер'
-  }, getCurrentUser());
-
-  managerResult.textContent = result.message;
-  if (result.ok) {
-    managerForm.reset();
-    renderUsers();
-  }
 }
 
 if (typeof document !== 'undefined') {
-  seedUsers();
-  fillFilters();
-  registrationForm.addEventListener('submit', handleRegistrationSubmit);
-  loginForm.addEventListener('submit', handleLoginSubmit);
-  managerForm.addEventListener('submit', handleManagerSubmit);
-  logoutButton.addEventListener('click', () => {
-    localStorage.removeItem(STORAGE_KEYS.session);
-    renderAuthState();
-    location.hash = 'auth';
-  });
-  renderCards();
-  renderDetail();
-  [searchInput, styleFilter, hallFilter].forEach((control) => control.addEventListener('input', renderCards));
-  window.addEventListener('hashchange', renderDetail);
-  renderAuthState();
+  document.querySelectorAll('.filter').forEach((button) => button.addEventListener('click', () => {
+    document.querySelectorAll('.filter').forEach((item) => item.classList.remove('active'));
+    button.classList.add('active');
+    loadProducts(button.dataset.category);
+  }));
+  bindForms();
+  loadProducts();
+  renderProductDetail();
+  renderAccount();
+  window.addEventListener('hashchange', renderProductDetail);
 }
 
-if (typeof module !== 'undefined') {
-  module.exports = { filterPaintings, canRegisterRole, isAdmin };
-}
+if (typeof module !== 'undefined') module.exports = { filterProducts, buildCartItems };
