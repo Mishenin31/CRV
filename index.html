@@ -17,7 +17,8 @@
         <a class="brand" href="#catalog">crv</a>
         <div class="nav-links">
           <a class="nav-link" href="#catalog">Каталог</a>
-          <a class="nav-link" href="#registration">Регистрация</a>
+          <a class="nav-link" href="#auth">Вход</a>
+          <a class="nav-link admin-only hidden" href="#adminCabinet">Кабинет админа</a>
         </div>
       </nav>
       <div class="hero__content">
@@ -29,7 +30,7 @@
         </p>
         <div class="hero__actions">
           <a class="button button--light" href="#catalog">Открыть каталог</a>
-          <a class="button button--outline" href="#registration">Зарегистрироваться</a>
+          <a class="button button--outline" href="#auth">Войти или зарегистрироваться</a>
         </div>
       </div>
     </header>
@@ -37,51 +38,91 @@
     <main>
       <section id="detail" class="detail hidden" aria-live="polite"></section>
 
-      <section id="registration" class="registration">
+      <section id="auth" class="registration">
         <div class="section-heading">
-          <p class="eyebrow">Регистрация</p>
-          <h2>Выберите роль в crv</h2>
-          <p>Зарегистрируйтесь как администратор, менеджер или покупатель, чтобы получить нужный набор возможностей.</p>
+          <p class="eyebrow">Авторизация и регистрация</p>
+          <h2>Войдите в crv</h2>
+          <p>Покупатели могут зарегистрироваться самостоятельно. Менеджеров добавляет только администратор через личный кабинет.</p>
         </div>
 
         <div class="roles" aria-label="Доступные роли">
           <article class="role-card">
             <span class="role-card__icon">A</span>
             <h3>Админ</h3>
-            <p>Управляет каталогом, ролями пользователей, NFC-страницами и настройками проекта.</p>
+            <p>Управляет пользователями, добавляет менеджеров и видит заявки посетителей.</p>
           </article>
           <article class="role-card">
             <span class="role-card__icon">M</span>
             <h3>Менеджер</h3>
-            <p>Добавляет экспонаты, обновляет описания, проверяет заявки и помогает посетителям.</p>
+            <p>Получает доступ после добавления администратором.</p>
           </article>
           <article class="role-card">
             <span class="role-card__icon">P</span>
             <h3>Покупатель</h3>
-            <p>Сохраняет понравившиеся картины, отправляет заявки и покупает доступные работы.</p>
+            <p>Регистрируется сам, сохраняет понравившиеся картины и отправляет заявки.</p>
           </article>
         </div>
 
-        <form id="registrationForm" class="registration-form">
-          <label>
-            Имя
-            <input id="userName" name="name" type="text" placeholder="Введите имя" required />
-          </label>
-          <label>
-            Email
-            <input id="userEmail" name="email" type="email" placeholder="name@example.com" required />
-          </label>
-          <label>
-            Роль
-            <select id="roleSelect" name="role" required>
-              <option value="Админ">Админ</option>
-              <option value="Менеджер">Менеджер</option>
-              <option value="Покупатель">Покупатель</option>
-            </select>
-          </label>
-          <button class="button" type="submit">Зарегистрироваться</button>
-          <p id="registrationResult" class="form-result" aria-live="polite"></p>
-        </form>
+        <div class="auth-grid">
+          <form id="loginForm" class="registration-form auth-form">
+            <h3>Вход</h3>
+            <label>
+              Email
+              <input id="loginEmail" name="email" type="email" placeholder="admin@crv.local" required />
+            </label>
+            <label>
+              Пароль
+              <input id="loginPassword" name="password" type="password" placeholder="Введите пароль" required />
+            </label>
+            <button class="button" type="submit">Войти</button>
+            <p class="meta">Демо-админ: admin@crv.local / admin123</p>
+            <p id="loginResult" class="form-result" aria-live="polite"></p>
+          </form>
+
+          <form id="registrationForm" class="registration-form auth-form">
+            <h3>Регистрация покупателя</h3>
+            <label>
+              Имя
+              <input id="userName" name="name" type="text" placeholder="Введите имя" required />
+            </label>
+            <label>
+              Email
+              <input id="userEmail" name="email" type="email" placeholder="name@example.com" required />
+            </label>
+            <label>
+              Пароль
+              <input id="userPassword" name="password" type="password" minlength="6" placeholder="Минимум 6 символов" required />
+            </label>
+            <input name="role" type="hidden" value="Покупатель" />
+            <button class="button" type="submit">Зарегистрироваться</button>
+            <p id="registrationResult" class="form-result" aria-live="polite"></p>
+          </form>
+        </div>
+      </section>
+
+      <section id="adminCabinet" class="admin-cabinet hidden">
+        <div class="section-heading">
+          <p class="eyebrow">Личный кабинет админа</p>
+          <h2>Управление командой</h2>
+          <p id="currentUserInfo">Войдите как администратор, чтобы добавлять менеджеров и смотреть зарегистрированных пользователей.</p>
+        </div>
+        <div class="admin-layout">
+          <form id="managerForm" class="registration-form auth-form">
+            <h3>Добавить менеджера</h3>
+            <label>Имя<input name="name" type="text" placeholder="Имя менеджера" required /></label>
+            <label>Email<input name="email" type="email" placeholder="manager@example.com" required /></label>
+            <label>Пароль<input name="password" type="password" minlength="6" placeholder="Минимум 6 символов" required /></label>
+            <button class="button" type="submit">Создать менеджера</button>
+            <p id="managerResult" class="form-result" aria-live="polite"></p>
+          </form>
+          <article class="users-panel">
+            <div class="panel-heading">
+              <h3>Пользователи</h3>
+              <button id="logoutButton" class="button button--ghost" type="button">Выйти</button>
+            </div>
+            <div id="usersList" class="users-list"></div>
+          </article>
+        </div>
       </section>
 
       <section id="catalog" class="catalog">

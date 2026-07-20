@@ -75,10 +75,19 @@ const paintings = [
 
 const STORAGE_KEYS = {
   registrations: 'crvRegistrations',
-  purchases: 'crvPurchaseRequests'
+  purchases: 'crvPurchaseRequests',
+  users: 'crvUsers',
+  session: 'crvSession'
 };
 
-const SECTION_HASHES = new Set(['', 'catalog', 'registration']);
+const SECTION_HASHES = new Set(['', 'catalog', 'auth', 'adminCabinet']);
+
+const DEFAULT_ADMIN = {
+  name: 'Администратор crv',
+  email: 'admin@crv.local',
+  password: 'admin123',
+  role: 'Админ'
+};
 
 const cards = typeof document !== 'undefined' ? document.querySelector('#cards') : null;
 const detail = typeof document !== 'undefined' ? document.querySelector('#detail') : null;
@@ -88,6 +97,14 @@ const hallFilter = typeof document !== 'undefined' ? document.querySelector('#ha
 const emptyState = typeof document !== 'undefined' ? document.querySelector('#emptyState') : null;
 const registrationForm = typeof document !== 'undefined' ? document.querySelector('#registrationForm') : null;
 const registrationResult = typeof document !== 'undefined' ? document.querySelector('#registrationResult') : null;
+const loginForm = typeof document !== 'undefined' ? document.querySelector('#loginForm') : null;
+const loginResult = typeof document !== 'undefined' ? document.querySelector('#loginResult') : null;
+const managerForm = typeof document !== 'undefined' ? document.querySelector('#managerForm') : null;
+const managerResult = typeof document !== 'undefined' ? document.querySelector('#managerResult') : null;
+const adminCabinet = typeof document !== 'undefined' ? document.querySelector('#adminCabinet') : null;
+const usersList = typeof document !== 'undefined' ? document.querySelector('#usersList') : null;
+const currentUserInfo = typeof document !== 'undefined' ? document.querySelector('#currentUserInfo') : null;
+const logoutButton = typeof document !== 'undefined' ? document.querySelector('#logoutButton') : null;
 
 function uniqueOptions(key) {
   return [...new Set(paintings.map((painting) => painting[key]))].sort();
@@ -141,6 +158,92 @@ function saveStoredItem(key, item) {
 
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function normalizeEmail(email) {
+  return email.toString().trim().toLowerCase();
+}
+
+function getUsers() {
+  const users = readStoredItems(STORAGE_KEYS.users);
+  const hasAdmin = users.some((user) => user.role === 'Админ');
+  return hasAdmin ? users : [{ ...DEFAULT_ADMIN, createdAt: new Date().toISOString() }, ...users];
+}
+
+function saveUsers(users) {
+  localStorage.setItem(STORAGE_KEYS.users, JSON.stringify(users));
+}
+
+function seedUsers() {
+  saveUsers(getUsers());
+}
+
+function getCurrentUser() {
+  try {
+    const session = JSON.parse(localStorage.getItem(STORAGE_KEYS.session));
+    if (!session?.email) return null;
+    return getUsers().find((user) => user.email === session.email) || null;
+  } catch {
+    return null;
+  }
+}
+
+function isAdmin(user) {
+  return user?.role === 'Админ';
+}
+
+function canRegisterRole(role, currentUser) {
+  if (role === 'Покупатель') return true;
+  if (role === 'Менеджер') return isAdmin(currentUser);
+  return false;
+}
+
+function addUser({ name, email, password, role }, currentUser = null) {
+  const cleanName = name.toString().trim();
+  const cleanEmail = normalizeEmail(email);
+  const cleanPassword = password.toString();
+
+  if (!cleanName) return { ok: false, message: 'Введите имя.' };
+  if (!cleanEmail || !isValidEmail(cleanEmail)) return { ok: false, message: 'Введите корректный email, например name@example.com.' };
+  if (cleanPassword.length < 6) return { ok: false, message: 'Пароль должен содержать минимум 6 символов.' };
+  if (!canRegisterRole(role, currentUser)) return { ok: false, message: 'Менеджеров может добавлять только администратор.' };
+
+  const users = getUsers();
+  if (users.some((user) => user.email === cleanEmail)) return { ok: false, message: 'Пользователь с таким email уже существует.' };
+
+  const user = { name: cleanName, email: cleanEmail, password: cleanPassword, role, createdAt: new Date().toISOString() };
+  users.push(user);
+  saveUsers(users);
+  saveStoredItem(STORAGE_KEYS.registrations, { name: cleanName, email: cleanEmail, role });
+  return { ok: true, user, message: `${cleanName}, регистрация в роли «${role}» выполнена.` };
+}
+
+function login(email, password) {
+  const cleanEmail = normalizeEmail(email);
+  const user = getUsers().find((item) => item.email === cleanEmail && item.password === password.toString());
+  if (!user) return { ok: false, message: 'Неверный email или пароль.' };
+  localStorage.setItem(STORAGE_KEYS.session, JSON.stringify({ email: user.email }));
+  return { ok: true, user, message: `Вы вошли как ${user.name} (${user.role}).` };
+}
+
+function renderUsers() {
+  if (!usersList) return;
+  const users = getUsers();
+  usersList.innerHTML = users.map((user) => `
+    <div class="user-row">
+      <strong>${user.name}</strong>
+      <span>${user.email}</span>
+      <span class="tag">${user.role}</span>
+    </div>
+  `).join('');
+}
+
+function renderAuthState() {
+  const user = getCurrentUser();
+  document.querySelectorAll('.admin-only').forEach((item) => item.classList.toggle('hidden', !isAdmin(user)));
+  if (adminCabinet) adminCabinet.classList.toggle('hidden', !isAdmin(user));
+  if (currentUserInfo) currentUserInfo.textContent = user ? `Сейчас в системе: ${user.name} (${user.role}).` : 'Войдите как администратор, чтобы открыть кабинет.';
+  renderUsers();
 }
 
 function renderCards() {
@@ -248,32 +351,64 @@ function renderDetail() {
 function handleRegistrationSubmit(event) {
   event.preventDefault();
   const formData = new FormData(registrationForm);
-  const name = formData.get('name').toString().trim();
-  const email = formData.get('email').toString().trim();
-  const role = formData.get('role');
-  const submitButton = registrationForm.querySelector('button[type="submit"]');
+  const result = addUser({
+    name: formData.get('name'),
+    email: formData.get('email'),
+    password: formData.get('password'),
+    role: formData.get('role')
+  });
 
-  if (!email || !isValidEmail(email)) {
-    registrationResult.textContent = 'Введите корректный email, например name@example.com.';
-    return;
+  registrationResult.textContent = result.message;
+  if (result.ok) registrationForm.reset();
+}
+
+function handleLoginSubmit(event) {
+  event.preventDefault();
+  const formData = new FormData(loginForm);
+  const result = login(formData.get('email'), formData.get('password'));
+  loginResult.textContent = result.message;
+  if (result.ok) {
+    loginForm.reset();
+    renderAuthState();
+    if (isAdmin(result.user)) location.hash = 'adminCabinet';
   }
+}
 
-  saveStoredItem(STORAGE_KEYS.registrations, { name, email, role });
-  registrationResult.textContent = `${name}, регистрация в роли «${role}» отправлена.`;
-  submitButton.disabled = true;
-  submitButton.textContent = 'Заявка отправлена';
-  registrationForm.reset();
+function handleManagerSubmit(event) {
+  event.preventDefault();
+  const formData = new FormData(managerForm);
+  const result = addUser({
+    name: formData.get('name'),
+    email: formData.get('email'),
+    password: formData.get('password'),
+    role: 'Менеджер'
+  }, getCurrentUser());
+
+  managerResult.textContent = result.message;
+  if (result.ok) {
+    managerForm.reset();
+    renderUsers();
+  }
 }
 
 if (typeof document !== 'undefined') {
+  seedUsers();
   fillFilters();
   registrationForm.addEventListener('submit', handleRegistrationSubmit);
+  loginForm.addEventListener('submit', handleLoginSubmit);
+  managerForm.addEventListener('submit', handleManagerSubmit);
+  logoutButton.addEventListener('click', () => {
+    localStorage.removeItem(STORAGE_KEYS.session);
+    renderAuthState();
+    location.hash = 'auth';
+  });
   renderCards();
   renderDetail();
   [searchInput, styleFilter, hallFilter].forEach((control) => control.addEventListener('input', renderCards));
   window.addEventListener('hashchange', renderDetail);
+  renderAuthState();
 }
 
 if (typeof module !== 'undefined') {
-  module.exports = { filterPaintings };
+  module.exports = { filterPaintings, canRegisterRole, isAdmin };
 }
