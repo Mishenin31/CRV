@@ -3,164 +3,86 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>crv</title>
-    <meta name="description" content="Интерактивная NFC-выставка crv: каталог картин, персональные страницы экспонатов, QR-коды и регистрация посетителей." />
-    <meta property="og:title" content="crv — интерактивная NFC-выставка" />
-    <meta property="og:description" content="Откройте каталог crv, страницы картин по NFC-меткам, QR-коды экспонатов и регистрацию ролей для выставки." />
-    <meta property="og:type" content="website" />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%239b4f2f'/%3E%3Ctext x='50%25' y='54%25' text-anchor='middle' dominant-baseline='middle' font-family='Arial,sans-serif' font-size='26' font-weight='700' fill='%23fffaf3'%3Ecrv%3C/text%3E%3C/svg%3E" />
+    <title>TechStore — интернет-магазин электроники</title>
+    <meta name="description" content="Каталог смартфонов, ноутбуков и аксессуаров с корзиной, оформлением заказа и личным кабинетом." />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <header class="hero">
       <nav class="topbar">
-        <a class="brand" href="#catalog">crv</a>
+        <a class="brand" href="#catalog">TechStore</a>
         <div class="nav-links">
-          <a class="nav-link" href="#catalog">Каталог</a>
-          <a class="nav-link" href="#auth">Вход</a>
-          <a class="nav-link admin-only hidden" href="#adminCabinet">Кабинет админа</a>
+          <a href="#catalog">Каталог</a>
+          <a href="#cart">Корзина <span id="cartCounter">0</span></a>
+          <a href="#auth">Вход</a>
+          <a href="#account">Личный кабинет</a>
         </div>
       </nav>
       <div class="hero__content">
-        <p class="eyebrow">Интерактивная выставка crv</p>
-        <h1>Поднесите телефон к NFC-чипу у картины</h1>
-        <p>
-          Телефон откроет персональную страницу экспоната с описанием, аудио-подсказкой,
-          QR-кодом для передачи информации и быстрым выходом в каталог.
-        </p>
-        <div class="hero__actions">
-          <a class="button button--light" href="#catalog">Открыть каталог</a>
-          <a class="button button--outline" href="#auth">Войти или зарегистрироваться</a>
-        </div>
+        <p class="eyebrow">Смартфоны · Ноутбуки · Аксессуары</p>
+        <h1>Интернет-магазин техники на HTML, CSS, JS и Express</h1>
+        <p>Каталог загружается с сервера Node.js, корзина хранится в браузере, а пользователи и заказы сохраняются в JSON-файле.</p>
       </div>
     </header>
 
     <main>
-      <section id="detail" class="detail hidden" aria-live="polite"></section>
-
-      <section id="auth" class="registration">
+      <section id="catalog" class="panel">
         <div class="section-heading">
-          <p class="eyebrow">Авторизация и регистрация</p>
-          <h2>Войдите в crv</h2>
-          <p>Покупатели могут зарегистрироваться самостоятельно. Менеджеров добавляет только администратор через личный кабинет.</p>
+          <p class="eyebrow">Каталог товаров</p>
+          <h2>Выберите категорию</h2>
         </div>
-
-        <div class="roles" aria-label="Доступные роли">
-          <article class="role-card">
-            <span class="role-card__icon">A</span>
-            <h3>Админ</h3>
-            <p>Управляет пользователями, добавляет менеджеров и видит заявки посетителей.</p>
-          </article>
-          <article class="role-card">
-            <span class="role-card__icon">M</span>
-            <h3>Менеджер</h3>
-            <p>Получает доступ после добавления администратором.</p>
-          </article>
-          <article class="role-card">
-            <span class="role-card__icon">P</span>
-            <h3>Покупатель</h3>
-            <p>Регистрируется сам, сохраняет понравившиеся картины и отправляет заявки.</p>
-          </article>
+        <div class="filters" role="search" aria-label="Фильтры каталога">
+          <button class="filter active" data-category="all" type="button">Все</button>
+          <button class="filter" data-category="smartphones" type="button">Смартфоны</button>
+          <button class="filter" data-category="laptops" type="button">Ноутбуки</button>
+          <button class="filter" data-category="accessories" type="button">Аксессуары</button>
         </div>
+        <div id="products" class="cards" aria-live="polite"></div>
+      </section>
 
+      <section id="product" class="panel hidden" aria-live="polite"></section>
+
+      <section id="cart" class="panel">
+        <div class="section-heading"><p class="eyebrow">Корзина</p><h2>Оформление заказа</h2></div>
+        <div id="cartItems" class="cart-list"></div>
+        <strong id="cartTotal" class="total">Итого: 0 ₽</strong>
+        <form id="orderForm" class="form">
+          <label>Имя<input name="name" required /></label>
+          <label>Email<input name="email" type="email" required /></label>
+          <label>Адрес доставки<input name="address" required /></label>
+          <button class="button" type="submit">Оформить заказ</button>
+          <p id="orderResult" class="result"></p>
+        </form>
+      </section>
+
+      <section id="auth" class="panel">
+        <div class="section-heading"><p class="eyebrow">Регистрация и аутентификация</p><h2>Войдите или создайте аккаунт</h2></div>
         <div class="auth-grid">
-          <form id="loginForm" class="registration-form auth-form">
-            <h3>Вход</h3>
-            <label>
-              Email
-              <input id="loginEmail" name="email" type="email" placeholder="admin@crv.local" required />
-            </label>
-            <label>
-              Пароль
-              <input id="loginPassword" name="password" type="password" placeholder="Введите пароль" required />
-            </label>
-            <button class="button" type="submit">Войти</button>
-            <p class="meta">Демо-админ: admin@crv.local / admin123</p>
-            <p id="loginResult" class="form-result" aria-live="polite"></p>
-          </form>
-
-          <form id="registrationForm" class="registration-form auth-form">
-            <h3>Регистрация покупателя</h3>
-            <label>
-              Имя
-              <input id="userName" name="name" type="text" placeholder="Введите имя" required />
-            </label>
-            <label>
-              Email
-              <input id="userEmail" name="email" type="email" placeholder="name@example.com" required />
-            </label>
-            <label>
-              Пароль
-              <input id="userPassword" name="password" type="password" minlength="6" placeholder="Минимум 6 символов" required />
-            </label>
-            <input name="role" type="hidden" value="Покупатель" />
+          <form id="registerForm" class="form">
+            <h3>Регистрация</h3>
+            <label>Имя<input name="name" required /></label>
+            <label>Email<input name="email" type="email" required /></label>
+            <label>Пароль<input name="password" type="password" minlength="6" required /></label>
             <button class="button" type="submit">Зарегистрироваться</button>
-            <p id="registrationResult" class="form-result" aria-live="polite"></p>
+            <p id="registerResult" class="result"></p>
+          </form>
+          <form id="loginForm" class="form">
+            <h3>Вход</h3>
+            <label>Email<input name="email" type="email" value="admin@shop.local" required /></label>
+            <label>Пароль<input name="password" type="password" value="admin123" required /></label>
+            <button class="button" type="submit">Войти</button>
+            <p id="loginResult" class="result"></p>
           </form>
         </div>
       </section>
 
-      <section id="adminCabinet" class="admin-cabinet hidden">
-        <div class="section-heading">
-          <p class="eyebrow">Личный кабинет админа</p>
-          <h2>Управление командой</h2>
-          <p id="currentUserInfo">Войдите как администратор, чтобы добавлять менеджеров и смотреть зарегистрированных пользователей.</p>
-        </div>
-        <div class="admin-layout">
-          <form id="managerForm" class="registration-form auth-form">
-            <h3>Добавить менеджера</h3>
-            <label>Имя<input name="name" type="text" placeholder="Имя менеджера" required /></label>
-            <label>Email<input name="email" type="email" placeholder="manager@example.com" required /></label>
-            <label>Пароль<input name="password" type="password" minlength="6" placeholder="Минимум 6 символов" required /></label>
-            <button class="button" type="submit">Создать менеджера</button>
-            <p id="managerResult" class="form-result" aria-live="polite"></p>
-          </form>
-          <article class="users-panel">
-            <div class="panel-heading">
-              <h3>Пользователи</h3>
-              <button id="logoutButton" class="button button--ghost" type="button">Выйти</button>
-            </div>
-            <div id="usersList" class="users-list"></div>
-          </article>
-        </div>
-      </section>
-
-      <section id="catalog" class="catalog">
-        <div class="section-heading">
-          <p class="eyebrow">Каталог</p>
-          <h2>Все картины</h2>
-          <p>Ищите по названию, автору, эпохе или настроению. Фильтры помогают быстро собрать маршрут по залу.</p>
-        </div>
-
-        <div class="filters" role="search">
-          <label>
-            Поиск
-            <input id="searchInput" type="search" placeholder="Например: море, Ван Гог, импрессионизм" />
-          </label>
-          <label>
-            Направление
-            <select id="styleFilter">
-              <option value="all">Все направления</option>
-            </select>
-          </label>
-          <label>
-            Зал
-            <select id="hallFilter">
-              <option value="all">Все залы</option>
-            </select>
-          </label>
-        </div>
-
-        <div id="cards" class="cards"></div>
-        <p id="emptyState" class="empty hidden">Ничего не найдено. Попробуйте изменить запрос или фильтр.</p>
+      <section id="account" class="panel">
+        <div class="section-heading"><p class="eyebrow">Личный кабинет</p><h2>История заказов</h2><p id="accountUser">Войдите, чтобы увидеть свои заказы.</p></div>
+        <div id="orders" class="cart-list"></div>
       </section>
     </main>
 
-    <footer>
-      <p>crv: для NFC-чипа используйте ссылку вида <code>https://site.example/#starry-night</code>.</p>
-    </footer>
-
-    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+    <footer>TechStore © 2026</footer>
     <script src="script.js"></script>
   </body>
 </html>
