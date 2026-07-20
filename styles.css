@@ -14,6 +14,11 @@ html { scroll-behavior: smooth; }
 body { margin: 0; background: var(--bg); color: var(--ink); }
 a { color: inherit; }
 
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 3px solid #f5bd85;
+  outline-offset: 3px;
+}
+
 .hero {
   min-height: 62vh;
   padding: 24px clamp(18px, 4vw, 64px) 64px;
@@ -63,6 +68,7 @@ input, select { width: 100%; margin-top: 8px; border: 1px solid var(--line); bor
 .detail__actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 22px 0; }
 .qr-panel { background: white; border: 1px solid var(--line); border-radius: 22px; padding: 18px; margin-top: 22px; }
 .qr-panel canvas, .qr-panel img { width: 180px !important; height: 180px !important; display: block; margin-top: 12px; }
+.qr-fallback { margin: 12px 0 0; overflow-wrap: anywhere; }
 .facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 20px; }
 .fact { background: rgba(255,255,255,.62); border: 1px solid var(--line); border-radius: 18px; padding: 14px; }
 .fact strong { display: block; font-size: .78rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }

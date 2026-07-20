@@ -73,14 +73,21 @@ const paintings = [
   }
 ];
 
-const cards = document.querySelector('#cards');
-const detail = document.querySelector('#detail');
-const searchInput = document.querySelector('#searchInput');
-const styleFilter = document.querySelector('#styleFilter');
-const hallFilter = document.querySelector('#hallFilter');
-const emptyState = document.querySelector('#emptyState');
-const registrationForm = document.querySelector('#registrationForm');
-const registrationResult = document.querySelector('#registrationResult');
+const STORAGE_KEYS = {
+  registrations: 'crvRegistrations',
+  purchases: 'crvPurchaseRequests'
+};
+
+const SECTION_HASHES = new Set(['', 'catalog', 'registration']);
+
+const cards = typeof document !== 'undefined' ? document.querySelector('#cards') : null;
+const detail = typeof document !== 'undefined' ? document.querySelector('#detail') : null;
+const searchInput = typeof document !== 'undefined' ? document.querySelector('#searchInput') : null;
+const styleFilter = typeof document !== 'undefined' ? document.querySelector('#styleFilter') : null;
+const hallFilter = typeof document !== 'undefined' ? document.querySelector('#hallFilter') : null;
+const emptyState = typeof document !== 'undefined' ? document.querySelector('#emptyState') : null;
+const registrationForm = typeof document !== 'undefined' ? document.querySelector('#registrationForm') : null;
+const registrationResult = typeof document !== 'undefined' ? document.querySelector('#registrationResult') : null;
 
 function uniqueOptions(key) {
   return [...new Set(paintings.map((painting) => painting[key]))].sort();
@@ -96,28 +103,62 @@ function paintingUrl(painting) {
 }
 
 function qrText(painting) {
-  return `${painting.title}\n${painting.author}, ${painting.year}\n${painting.style}, ${painting.hall}\n${painting.description}\nСсылка: ${paintingUrl(painting)}`;
+  return paintingUrl(painting);
+}
+
+function filterPaintings(items, query = '', style = 'all', hall = 'all') {
+  const normalizedQuery = query.trim().toLowerCase();
+  return items.filter((painting) => {
+    const haystack = [
+      painting.title,
+      painting.author,
+      painting.year,
+      painting.style,
+      painting.hall,
+      painting.mood,
+      painting.description
+    ].join(' ').toLowerCase();
+
+    return (!normalizedQuery || haystack.includes(normalizedQuery))
+      && (style === 'all' || painting.style === style)
+      && (hall === 'all' || painting.hall === hall);
+  });
+}
+
+function readStoredItems(key) {
+  try {
+    return JSON.parse(localStorage.getItem(key)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function saveStoredItem(key, item) {
+  const items = readStoredItems(key);
+  items.push({ ...item, createdAt: new Date().toISOString() });
+  localStorage.setItem(key, JSON.stringify(items));
+}
+
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 function renderCards() {
-  const query = searchInput.value.trim().toLowerCase();
+  const query = searchInput.value;
   const style = styleFilter.value;
   const hall = hallFilter.value;
-  const filtered = paintings.filter((painting) => {
-    const haystack = [painting.title, painting.author, painting.year, painting.style, painting.hall, painting.mood, painting.description].join(' ').toLowerCase();
-    return (!query || haystack.includes(query)) && (style === 'all' || painting.style === style) && (hall === 'all' || painting.hall === hall);
-  });
+  const filtered = filterPaintings(paintings, query, style, hall);
 
   cards.innerHTML = filtered.map((painting) => `
     <article class="card" style="--painting-gradient: ${painting.colors}">
-      <div class="card__image" aria-hidden="true"></div>
+      <div class="card__image" role="img" aria-label="Цветовая композиция картины ${painting.title}"></div>
       <div class="card__body">
         <h3>${painting.title}</h3>
         <p class="meta">${painting.author} · ${painting.year}<br>${painting.style} · ${painting.hall}</p>
         <div class="tags"><span class="tag">${painting.mood}</span><span class="tag">NFC: #${painting.id}</span></div>
         <div class="card__actions">
           <a class="button" href="#${painting.id}">Страница картины</a>
-          <button class="button button--ghost buy-button" type="button" data-title="${painting.title}">Купить</button>
+          <button class="button button--ghost buy-button" type="button" data-id="${painting.id}" data-title="${painting.title}">Купить</button>
         </div>
       </div>
     </article>
@@ -125,18 +166,44 @@ function renderCards() {
   emptyState.classList.toggle('hidden', filtered.length > 0);
   document.querySelectorAll('.buy-button').forEach((button) => {
     button.addEventListener('click', () => {
+      saveStoredItem(STORAGE_KEYS.purchases, {
+        paintingId: button.dataset.id,
+        title: button.dataset.title
+      });
       button.textContent = 'Заявка отправлена';
       button.disabled = true;
     });
   });
 }
 
+function renderNotFound(id) {
+  detail.classList.remove('hidden');
+  detail.removeAttribute('style');
+  detail.innerHTML = `
+    <div class="detail__content detail__content--not-found">
+      <p class="eyebrow">NFC-страница</p>
+      <h2>Экспонат не найден</h2>
+      <p class="meta">Экспонат с идентификатором «${id}» отсутствует в каталоге crv.</p>
+      <div class="detail__actions">
+        <a class="button" href="#catalog">Вернуться в каталог</a>
+      </div>
+    </div>
+  `;
+}
+
 function renderDetail() {
   const id = decodeURIComponent(location.hash.replace('#', ''));
   const painting = paintings.find((item) => item.id === id);
-  detail.classList.toggle('hidden', !painting);
-  if (!painting) return;
 
+  if (!painting) {
+    detail.classList.toggle('hidden', SECTION_HASHES.has(id));
+    if (!SECTION_HASHES.has(id)) {
+      renderNotFound(id);
+    }
+    return;
+  }
+
+  detail.classList.remove('hidden');
   detail.style.setProperty('--painting-gradient', painting.colors);
   detail.innerHTML = `
     <div class="detail__content">
@@ -153,17 +220,22 @@ function renderDetail() {
         <button class="button button--ghost" type="button" id="copyLink">Скопировать ссылку для NFC</button>
       </div>
       <div class="qr-panel">
-        <strong>QR-код с информацией о картине</strong>
-        <p class="meta">Посетитель может отсканировать код и сохранить описание или ссылку на страницу.</p>
+        <strong>QR-код со ссылкой на картину</strong>
+        <p class="meta">Посетитель может отсканировать код и открыть страницу экспоната.</p>
         <canvas id="qrCanvas" aria-label="QR-код картины ${painting.title}"></canvas>
+        <p id="qrFallback" class="qr-fallback hidden"><a href="${paintingUrl(painting)}">${paintingUrl(painting)}</a></p>
       </div>
     </div>
-    <div class="detail__image" aria-hidden="true"></div>
+    <div class="detail__image" role="img" aria-label="Цветовая композиция картины ${painting.title}"></div>
   `;
 
   const canvas = document.querySelector('#qrCanvas');
+  const fallback = document.querySelector('#qrFallback');
   if (window.QRCode) {
     QRCode.toCanvas(canvas, qrText(painting), { width: 180, margin: 1, color: { dark: '#201a17', light: '#ffffff' } });
+  } else {
+    canvas.classList.add('hidden');
+    fallback.classList.remove('hidden');
   }
 
   document.querySelector('#copyLink').addEventListener('click', async () => {
@@ -177,14 +249,31 @@ function handleRegistrationSubmit(event) {
   event.preventDefault();
   const formData = new FormData(registrationForm);
   const name = formData.get('name').toString().trim();
+  const email = formData.get('email').toString().trim();
   const role = formData.get('role');
+  const submitButton = registrationForm.querySelector('button[type="submit"]');
+
+  if (!email || !isValidEmail(email)) {
+    registrationResult.textContent = 'Введите корректный email, например name@example.com.';
+    return;
+  }
+
+  saveStoredItem(STORAGE_KEYS.registrations, { name, email, role });
   registrationResult.textContent = `${name}, регистрация в роли «${role}» отправлена.`;
+  submitButton.disabled = true;
+  submitButton.textContent = 'Заявка отправлена';
   registrationForm.reset();
 }
 
-fillFilters();
-registrationForm.addEventListener('submit', handleRegistrationSubmit);
-renderCards();
-renderDetail();
-[searchInput, styleFilter, hallFilter].forEach((control) => control.addEventListener('input', renderCards));
-window.addEventListener('hashchange', renderDetail);
+if (typeof document !== 'undefined') {
+  fillFilters();
+  registrationForm.addEventListener('submit', handleRegistrationSubmit);
+  renderCards();
+  renderDetail();
+  [searchInput, styleFilter, hallFilter].forEach((control) => control.addEventListener('input', renderCards));
+  window.addEventListener('hashchange', renderDetail);
+}
+
+if (typeof module !== 'undefined') {
+  module.exports = { filterPaintings };
+}
